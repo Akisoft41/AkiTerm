@@ -8,8 +8,10 @@
 // https://github.com/microsoft/terminal
 //
 //
+// Licensed under the MIT license.
+
+
 // v0.1 08.01.2020  first version
-//
 
 
 using System;
