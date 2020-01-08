@@ -1,4 +1,4 @@
-﻿# Welcome to the AkiTerm
+﻿# Welcome to AkiTerm
 
 A serial terminal in command line mode.
 
