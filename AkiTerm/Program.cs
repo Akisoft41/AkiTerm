@@ -12,6 +12,7 @@
 
 
 // v0.1 08.01.2020  first version
+// v0.2 16.04.2020  implement ESC[5n and ESC[6n (for linenoise)
 
 
 using System;
@@ -55,7 +56,7 @@ namespace AkiTerm
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Welcome to AkiTerm, a serial terminal in command line mode.");
+            Console.WriteLine("Welcome to AkiTerm v0.2, a serial terminal in command line mode.");
             Console.WriteLine();
             Console.WriteLine($"Escape Character is 'CTRL+A'");
             Console.WriteLine();
@@ -494,6 +495,10 @@ namespace AkiTerm
             return sb.ToString();
         }
 
+
+
+
+
         private static void Terminal()
         {
             var records = new Kernel32.INPUT_RECORD[128];
@@ -511,7 +516,7 @@ namespace AkiTerm
                         if (record.EventType == Kernel32.EVENT_TYPE.KEY_EVENT)
                         {
                             // skip key up events - if not, every key will be duped in the stream
-                            if (!record.Event.KeyEvent.bKeyDown ) continue;
+                            if (!record.Event.KeyEvent.bKeyDown) continue;
                             if ((ushort)record.Event.KeyEvent.uChar == 0)
                                 Debug.WriteLine($"Serial Write: {(ushort)record.Event.KeyEvent.uChar} ''  {record.Event.KeyEvent.dwControlKeyState} {record.Event.KeyEvent.wVirtualKeyCode} {record.Event.KeyEvent.wVirtualScanCode}");
                             else
@@ -563,7 +568,7 @@ namespace AkiTerm
                         }
                         else
                         {
-                                Debug.WriteLine($"Event {record.EventType} {record.Event}");
+                            Debug.WriteLine($"Event {record.EventType} {record.Event}");
                         }
                     }
 
@@ -647,10 +652,33 @@ namespace AkiTerm
                 //var writeSuccess = Kernel32.WriteConsole(_handleOut, bufChar, (uint)num, out uint numWrite);
 
                 var str = _serialPort.ReadExisting();
+
+                // debug log
                 var dec = new StringBuilder();
                 foreach (var c in str.ToCharArray()) dec.Append($"{(ushort)c} ");
                 Debug.WriteLine($"Serial Read: {dec.ToString()}'{str}'");
-                if (_terminalMode) Console.Write(str);
+
+                if (!_terminalMode) return;
+
+                var sb = new StringBuilder(str);
+                int i = sb.ToString().IndexOf("\x1b[5n");
+                if (i >= 0)
+                {
+                    Console.Write(sb.ToString(0, i));
+                    sb.Remove(0, i + 4);
+                    _serialPort.Write("\x1b[0n");
+                    Debug.WriteLine($"Serial Read: 'ESC[5n' response: ESC[0n");
+                }
+                i = sb.ToString().IndexOf("\x1b[6n");
+                if (i >= 0)
+                {
+                    Console.Write(sb.ToString(0, i));
+                    sb.Remove(0, i + 4);
+                    _serialPort.Write($"\x1b[{Console.CursorTop};{Console.CursorLeft}R");
+                    Debug.WriteLine($"Serial Read: 'ESC[6n' response: ESC[{Console.CursorTop - Console.WindowTop};{Console.CursorLeft}R");
+                }
+
+                Console.Write(sb.ToString());
             }
         }
     }
